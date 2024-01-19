@@ -29,8 +29,10 @@
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
 //----------------------------------------------------------------------------------
-const float drag = 0.8f;
+const float drag = 0.9f;
 const float moveSpeed = 1.0f;
+
+Camera2D camera = { 0 };
 
 
 typedef struct {
@@ -45,6 +47,21 @@ typedef struct {
 	void (*Draw)(struct Player*);
 
 } Player;
+
+typedef struct {
+	Vector2 position;
+	int size;
+	Vector2 speed;
+	float acceleration;
+	float rotation;
+	Vector3 collider;
+	Color color;
+	void (*UpdatePosition)(struct Enemy*, struct Player*);
+	void (*Draw)(struct Enemy*);
+} Enemy;
+
+#define MAX_ENEMIES 5
+Enemy enemies[MAX_ENEMIES];
 
 
 static int framesCounter = 0;
@@ -98,6 +115,37 @@ void DrawPlayer(Player* player)
 	DrawCircleV(player->position, player->size, player->color);
 }
 
+
+
+
+// Gameplay Screen Update logic
+
+
+void UpdateEnemyPosition(Enemy* enemy, Player* player)
+{
+	// Create a direction vector pointing from the enemy to the player
+	Vector2 direction = { player->position.x - enemy->position.x, player->position.y - enemy->position.y };
+
+	// Normalize the direction vector to ensure consistent speed in all directions
+	float length = sqrt(direction.x * direction.x + direction.y * direction.y);
+	if (length > 0.0f) {
+		direction.x /= length;
+		direction.y /= length;
+	}
+
+	// Apply the direction to the enemy's position
+	enemy->position.x += direction.x * 0.1f; // Adjust the multiplier to change the speed
+	enemy->position.y += direction.y * 0.1f; // Adjust the multiplier to change the speed
+}
+
+void DrawEnemy(Enemy* enemy)
+{
+	// Draw the enemy
+	DrawCircleV(enemy->position, enemy->size, enemy->color);
+}
+
+
+
 void InitGameplayScreen(void)
 {
 	// Initialize player
@@ -116,18 +164,45 @@ void InitGameplayScreen(void)
 	finishScreen = 0;
 
 
+	//init camera
+	camera.target = player.position;
+	camera.offset = (Vector2){ GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f };
+	camera.rotation = 0.0f;
+	camera.zoom = 1.0f;
+
+
+
+	for (int i = 0; i < MAX_ENEMIES; i++)
+	{
+		enemies[i].position = (Vector2){ GetRandomValue(0, GetScreenWidth()), GetRandomValue(0, GetScreenHeight()) };
+		enemies[i].speed = (Vector2){ 0.0f, 0.0f };
+		enemies[i].size = 20;
+		enemies[i].acceleration = 0.0f;
+		enemies[i].rotation = 0.0f;
+		enemies[i].collider = (Vector3){ 0.0f, 0.0f, 0.0f };
+		enemies[i].color = RED;
+		enemies[i].UpdatePosition = UpdateEnemyPosition;
+		enemies[i].Draw = DrawEnemy;
+	}
 }
 
-
-
-// Gameplay Screen Update logic
 void UpdateGameplayScreen(void)
 {
 	// TODO: Update GAMEPLAY screen variables here!
 
-	// Update player position
-
+	 // Update player position
 	player.UpdatePosition(&player);
+
+	//update enemies position
+	for (int i = 0; i < MAX_ENEMIES; i++)
+	{
+		enemies[i].UpdatePosition(&enemies[i], &player);
+	}
+
+
+
+	// Update camera target
+	camera.target = player.position;
 
 
 	// Press enter or tap to change to ENDING screen
@@ -146,15 +221,40 @@ void DrawGameplayScreen(void)
 {
 	// TODO: Draw GAMEPLAY screen here!
 	DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
-	Vector2 pos = { 20, 10 };
+	//Vector2 pos = { 20, 10 };
 	//DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize * 3.0f, 4, MAROON);
 	//DrawText("PRESS ENTER or TAP to JUMP to ENDING SCREEN", 130, 220, 20, MAROON);
 
+	BeginMode2D(camera);
+
+
+
+
+	int gridSize = 40; // Change this to change the size of the grid cells
+
+	int minX = (int)(camera.target.x - GetScreenWidth() / 2) / gridSize - 1;
+	int minY = (int)(camera.target.y - GetScreenHeight() / 2) / gridSize - 1;
+	int maxX = (int)(camera.target.x + GetScreenWidth() / 2) / gridSize + 1;
+	int maxY = (int)(camera.target.y + GetScreenHeight() / 2) / gridSize + 1;
+
+	for (int x = minX; x < maxX; x++)	
+	{
+		for (int y = minY; y < maxY; y++)
+		{
+			DrawRectangleLines(x * gridSize, y * gridSize, gridSize, gridSize, DARKGRAY);
+		}
+	}
+
+	// Draw the enemies 
+	for (int i = 0; i < MAX_ENEMIES; i++)
+	{
+		enemies[i].Draw(&enemies[i]);
+	}
 
 	// Draw the player
 	player.Draw(&player);
 
-
+	EndMode2D();
 
 }
 
