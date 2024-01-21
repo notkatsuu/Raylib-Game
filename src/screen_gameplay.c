@@ -73,6 +73,8 @@ const float moveSpeed = 2.0f;
 float enemySpeed = 1.0f;
 int difficulty;
 static float bulletFireTimer = 0.0f;
+static float worldTime = 0.0f;
+
 
 Camera2D camera = { 0 };
 
@@ -179,23 +181,42 @@ void DrawOrbs(void) {
 
 void UpdateEnemy(Enemy* enemy)
 {
-	if (!enemy->active) return;
-	// delete enemy if health is 0 or lower
-	if (enemy->health <= 0) {
+	static float nextEnemySpawnTime = 0.2f;
 
-		//completely delete enemy without respawn
-
+	if (enemy->health <= 0 && enemy->active) {
 
 		SpawnOrb(enemy->position);
-
-		//respawn enemy outside of the camera range of vision
-		int respawnOffset = 100; // Adjust as needed
-		enemy->position = (Vector2){
-			GetRandomValue(camera.target.x - GetScreenWidth() / 2 - respawnOffset, camera.target.x + GetScreenWidth() / 2 + respawnOffset),
-			GetRandomValue(camera.target.y - GetScreenHeight() / 2 - respawnOffset, camera.target.y + GetScreenHeight() / 2 + respawnOffset)
-		};
-		enemy->health = 3; // Reset health
+		enemy->active = false;
+		enemy->position = (Vector2){ 0.0f, 0.0f };
+		
 	}
+	if (!enemy->active && worldTime>= nextEnemySpawnTime) {
+
+		
+
+
+		
+        
+
+        //respawn enemy outside of the camera range of vision
+        int respawnOffset = 100; // Adjust as needed
+        float angle = (float)GetRandomValue(0, 360); // Random angle in degrees
+        float distance = (float)(GetScreenWidth() / 2 + respawnOffset); // Distance from the center of the screen
+
+        // Convert polar coordinates to Cartesian coordinates
+        enemy->position = (Vector2){ 
+            camera.target.x + cos(angle * PI / 180.0f) * distance,
+            camera.target.y + sin(angle * PI / 180.0f) * distance
+        };
+
+		enemy->health = 2; // Reset health
+		enemy->active = true;
+
+		nextEnemySpawnTime += 0.2f;
+
+	}
+
+
 	Vector2 direction = { 0.0f, 0.0f };
 	direction.x = (player.position.x-enemy->position.x);
 	direction.y = (player.position.y-enemy->position.y);
@@ -354,12 +375,12 @@ void InitGameplayScreen(void)
 	//init enemies
 	for (int i = 0; i < MAX_ENEMIES; i++)
 	{
-		enemies[i].position = (Vector2){ GetRandomValue(0, GetScreenWidth()), GetRandomValue(0, GetScreenHeight()) };
+		
 		enemies[i].speed = (Vector2){ 0.0f, 0.0f };
 		enemies[i].size = 20;
 		enemies[i].color = RED;
-		enemies[i].health = 3;
-		enemies[i].active = true;
+		enemies[i].health = 2;
+		enemies[i].active = false;
 
 
 	}
@@ -377,7 +398,7 @@ void InitGameplayScreen(void)
 void UpdateGameplayScreen(void)
 {
 
-
+	worldTime += GetFrameTime();
 	// Update player position
 	UpdatePlayer(&player);
 
