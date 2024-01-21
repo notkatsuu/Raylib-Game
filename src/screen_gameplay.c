@@ -15,6 +15,8 @@
 
 #define MAX_ORBS 100
 
+#define HEIGHT 144
+#define WIDTH 256
 
 
 typedef struct {
@@ -68,10 +70,10 @@ Enemy enemies[MAX_ENEMIES];
 Bullet bullets[MAX_BULLETS];
 Orb orbs[MAX_ORBS];
 Player player;
-float playerSpeed = 2.0f;
+float playerSpeed = 1.0f;
 int needXP = 4;
 const float moveSpeed = 2.0f;
-float enemySpeed = 1.0f;
+float enemySpeed = 0.3f;
 int difficulty;
 static float bulletFireTimer = 0.0f;
 static float worldTime = 0.0f;
@@ -160,7 +162,7 @@ void SpawnOrb(Vector2 position) {
 	for (int i = 0; i < MAX_ORBS; i++) {
 		if (!orbs[i].active) {
 			orbs[i].position = position;
-			orbs[i].size = 10; // Set the size of the orb
+			orbs[i].size = 3; // Set the size of the orb
 			orbs[i].active = true;
 			orbs[i].exp = 1;
 			orbs[i].color = GREEN;
@@ -200,7 +202,7 @@ void UpdateEnemy(Enemy* enemy)
         //respawn enemy outside of the camera range of vision
         int respawnOffset = 100; // Adjust as needed
         float angle = (float)GetRandomValue(0, 360); // Random angle in degrees
-        float distance = (float)(GetScreenWidth() / 2 + respawnOffset); // Distance from the center of the screen
+        float distance = (float)( WIDTH / 2 + respawnOffset); // Distance from the center of the screen
 
         // Convert polar coordinates to Cartesian coordinates
         enemy->position = (Vector2){ 
@@ -287,10 +289,10 @@ void UpdateDagger(void) {
 			bullets[i].position.y += bullets[i].direction.y * bullets[i].speed;
 
 			// Deactivate bullet if it reaches the border of the camera.
-			if (bullets[i].position.x < camera.target.x - GetScreenWidth() / 2 ||
-				bullets[i].position.y < camera.target.y - GetScreenHeight() / 2 ||
-				bullets[i].position.x > camera.target.x + GetScreenWidth() / 2 ||
-				bullets[i].position.y > camera.target.y + GetScreenHeight() / 2) {
+			if (bullets[i].position.x < camera.target.x - WIDTH / 2 ||
+				bullets[i].position.y < camera.target.y - HEIGHT / 2 ||
+				bullets[i].position.x > camera.target.x + WIDTH / 2 ||
+				bullets[i].position.y > camera.target.y + HEIGHT / 2) {
 				bullets[i].active = false;
 			}
 
@@ -319,9 +321,9 @@ void DrawBullets(void) {
 }
 
 void DrawHealthBar(Player* player) {
-	int healthBarWidth = 50; // Adjust as needed
-	int healthBarHeight = 10; // Adjust as needed
-	int healthBarOffsetY = -30; // Adjust as needed
+	int healthBarWidth = 20; // Adjust as needed
+	int healthBarHeight = 4; // Adjust as needed
+	int healthBarOffsetY = -10; // Adjust as needed
 
 	Vector2 healthBarPosition = { player->position.x - healthBarWidth / 2, player->position.y - healthBarOffsetY };
 
@@ -330,9 +332,9 @@ void DrawHealthBar(Player* player) {
 }
 
 void DrawXPBar(Player* player) {
-	int xpBarWidth = GetScreenWidth(); // Full width of the screen
-	int xpBarHeight = 40; // Adjust as needed
-	int XPBarOffsetY = GetScreenHeight()/2; // Adjust as needed
+	int xpBarWidth = WIDTH; // Full width of the screen
+	int xpBarHeight = 8; // Adjust as needed
+	int XPBarOffsetY = HEIGHT/2; // Adjust as needed
 
 	Vector2 xpBarPosition = { player->position.x - xpBarWidth / 2, player->position.y - XPBarOffsetY };
 
@@ -341,8 +343,8 @@ void DrawXPBar(Player* player) {
 
 	char levelText[32];
 	sprintf(levelText, "Level: %d", player->level);
-	int textWidth = MeasureText(levelText, 35); // Measure the width of the text
-	DrawText(levelText, xpBarPosition.x + xpBarWidth - textWidth - 60, xpBarPosition.y+4, 35, GRAY); // Adjust size and color as needed
+	int textWidth = MeasureText(levelText, 5); // Measure the width of the text
+	DrawText(levelText, xpBarPosition.x + xpBarWidth - textWidth - 5, xpBarPosition.y, 5, GRAY); // Adjust size and color as needed
 
 }
 
@@ -352,22 +354,22 @@ void DrawXPBar(Player* player) {
 void InitGameplayScreen(void)
 {
 	// Initialize player
-	player.position = (Vector2){ GetScreenWidth() / 2, GetScreenHeight() / 2 };
+	player.position = (Vector2){ WIDTH / 2, HEIGHT / 2 };
 	player.direction = (Vector2){ 0.0f, 0.0f };
 	player.speed = (Vector2){ 0.0f, 0.0f };
-	player.size = 20;
+	player.size = 6;
 	player.color = BLUE;
 	player.xp = 0;
 	player.level = 1;
 	player.health = PLAYER_MAX_HEALTH;
-	player.absorptionRadius = 100;
+	player.absorptionRadius = 20;
 
 
 	finishScreen = 0;
 
 	//init camera
 	camera.target = player.position;
-	camera.offset = (Vector2){ GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f };
+	camera.offset = (Vector2){ WIDTH / 2.0f, HEIGHT / 2.0f };
 	camera.rotation = 0.0f;
 	camera.zoom = 1.0f;
 
@@ -376,7 +378,7 @@ void InitGameplayScreen(void)
 	{
 		
 		enemies[i].speed = (Vector2){ 0.0f, 0.0f };
-		enemies[i].size = 20;
+		enemies[i].size = 6;
 		enemies[i].color = RED;
 		enemies[i].health = 2;
 		enemies[i].active = false;
@@ -418,16 +420,16 @@ void UpdateGameplayScreen(void)
 
 void DrawGameplayScreen(void)
 {
-	DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+	DrawRectangle(0, 0, WIDTH, HEIGHT, BLACK);
 
 	BeginMode2D(camera);
 
 	int gridSize = 40; // Change this to change the size of the grid cells
 
-	int minX = (int)(camera.target.x - GetScreenWidth() / 2) / gridSize - 1;
-	int minY = (int)(camera.target.y - GetScreenHeight() / 2) / gridSize - 1;
-	int maxX = (int)(camera.target.x + GetScreenWidth() / 2) / gridSize + 1;
-	int maxY = (int)(camera.target.y + GetScreenHeight() / 2) / gridSize + 1;
+	int minX = (int)(camera.target.x - WIDTH / 2) / gridSize - 1;
+	int minY = (int)(camera.target.y - HEIGHT / 2) / gridSize - 1;
+	int maxX = (int)(camera.target.x + WIDTH / 2) / gridSize + 1;
+	int maxY = (int)(camera.target.y + HEIGHT / 2) / gridSize + 1;
 
 	for (int x = minX; x < maxX; x++)
 	{
