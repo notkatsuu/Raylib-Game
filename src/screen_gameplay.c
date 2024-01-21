@@ -29,7 +29,7 @@ typedef struct {
 	int level;
 	int health;
 	float absorptionRadius;
-
+	float fireRate;
 
 } Player;
 
@@ -261,7 +261,7 @@ void throwDagger(void) {
 
 	bulletFireTimer += GetFrameTime(); // Increment timer
 
-	if (bulletFireTimer >= 0.2f) { // Change 0.2f to your desired fire interval
+	if (bulletFireTimer >= player.fireRate) { // Change 0.2f to your desired fire interval
 		bulletFireTimer = 0.0f; // Reset timer
 
 		for (int i = 0; i < MAX_BULLETS; i++) {
@@ -376,6 +376,7 @@ void InitGameplayScreen(void)
 	player.level = 1;
 	player.health = PLAYER_MAX_HEALTH;
 	player.absorptionRadius = 20;
+	player.fireRate = 0.2f;
 
 
 	finishScreen = 0;
