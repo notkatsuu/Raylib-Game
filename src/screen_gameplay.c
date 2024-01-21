@@ -78,8 +78,8 @@ Orb orbs[MAX_ORBS];
 Player player;
 float playerSpeed = 1.0f;
 int needXP = 4;
-const float moveSpeed = 2.0f;
-float enemySpeed = 0.3f;
+const float moveSpeed = 1.0f;
+float enemySpeed = 0.6f;
 int difficulty;
 static float bulletFireTimer = 0.0f;
 static float worldTime = 0.0f;
@@ -194,7 +194,7 @@ void UpdateEnemy(Enemy* enemy)
 
 		SpawnOrb(enemy->position);
 		enemy->active = false;
-		enemy->position = (Vector2){ 0.0f, 0.0f };
+		enemy->position = (Vector2){ -500.0f, -500.0f };
 		
 	}
 	if (!enemy->active && worldTime>= nextEnemySpawnTime) {
@@ -319,17 +319,18 @@ void UpdateDagger(void) {
 }
 
 void DrawBullets(void) {
-	
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		if (bullets[i].active) {
-			DrawTexture(bulletTexture, bullets[i].position.x, bullets[i].position.y, WHITE);
+			Rectangle sourceRec = { 0.0f, 0.0f, (float)bulletTexture.width, (float)bulletTexture.height };
+			Rectangle destRec = { bullets[i].position.x, bullets[i].position.y, (float)bulletTexture.width, (float)bulletTexture.height };
+			Vector2 origin = { (float)bulletTexture.width / 2, (float)bulletTexture.height / 2 };
 
-			DrawCircle(bullets[i].position.x, bullets[i].position.y, 2, RED);
+			// Calculate rotation
+			float rotation = atan2f(bullets[i].direction.y, bullets[i].direction.x) * (180.0f / PI);
+
+			DrawTexturePro(bulletTexture, sourceRec, destRec, origin, rotation, WHITE);
 		}
-		
 	}
-
-
 }
 
 void DrawHealthBar(Player* player) {
@@ -399,7 +400,7 @@ void InitGameplayScreen(void)
 	}
 
 	//init bullets
-	bulletTexture = LoadTexture("resources/dagger.png");
+	bulletTexture = LoadTexture("../resources/dagger.png");
 	printf("Texture Width: %d, Height: %d\n", bulletTexture.width, bulletTexture.height);
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		bullets[i].speed = 8;
