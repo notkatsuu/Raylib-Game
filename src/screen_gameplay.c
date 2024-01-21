@@ -1,50 +1,78 @@
 #include "raylib.h"
 #include "screens.h"
+#include <math.h>
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
 //----------------------------------------------------------------------------------
 
 
+#define MAX_ENEMIES 100
+
+#define PLAYER_MAX_HEALTH 100
+#define MAX_BULLETS 50
+
+#define MAX_ORBS 5
+
+
+
 typedef struct {
 	Vector2 position;
 	Vector2 direction;
 	int size;
 	Vector2 speed;
 	Color color;
-	void (*UpdatePosition)(struct Player*);
-	void (*Draw)(struct Player*);
+	int xp;
+	int level;
+	int health;
+	float absorptionRadius;
+
 
 } Player;
 
 typedef struct {
 	Vector2 position;
 	int size;
+	int health;
 	Vector2 speed;
 	Color color;
-	void (*UpdatePosition)(struct Enemy*, struct Player*);
-	void (*Draw)(struct Enemy*);
+	float hitTimer;
+	bool active;
 } Enemy;
 
 typedef struct Bullet {
 	Vector2 position;
 	Vector2 direction;
 	float speed;
+	int remainingHits;
+	int hits;
+	int dmg;
 	bool active;
+	bool hitEnemies[MAX_ENEMIES]; // New field
 } Bullet;
 
+typedef struct Orb {
+	Vector2 position;
+	int size;
+	int exp;
+	Color color;
+	bool active;
+} Orb;
 
 
-#define MAX_ENEMIES 5
-Enemy enemies[MAX_ENEMIES];
 
-#define MAX_BULLETS 50
-Bullet bullets[MAX_BULLETS];
 
 static int finishScreen = 0;
-
+Enemy enemies[MAX_ENEMIES];
+Bullet bullets[MAX_BULLETS];
+Orb orbs[MAX_ORBS];
 Player player;
+float playerSpeed = 2.0f;
+int needXP = 4;
 const float moveSpeed = 2.0f;
+float enemySpeed = 1.0f;
+int difficulty;
+static float bulletFireTimer = 0.0f;
 
 Camera2D camera = { 0 };
 
@@ -54,7 +82,37 @@ Camera2D camera = { 0 };
 // Gameplay Screen Functions Definition
 //----------------------------------------------------------------------------------
 
-void UpdatePlayerPosition(Player* player)
+void AbsorbOrbs(Player* player) {
+	for (int i = 0; i < MAX_ORBS; i++) {
+		if (orbs[i].active) {
+			if (CheckCollisionCircles(player->position, player->absorptionRadius, orbs[i].position, orbs[i].size)) {
+				//make orbs move towards the player
+				Vector2 direction = { 0.0f, 0.0f };
+
+				direction.x = (player->position.x - orbs[i].position.x);
+				direction.y = (player->position.y - orbs[i].position.y);
+
+				// Normalize the direction vector to ensure consistent speed in all directions
+
+				float length = sqrt((double)(direction.x * direction.x + direction.y * direction.y));
+				if (length > 1.0f) {
+					direction.x /= length;
+					direction.y /= length;
+				}
+				// Apply the player's speed to their position
+				orbs[i].position.x += direction.x * 2;
+				orbs[i].position.y += direction.y * 2;
+
+				//check if orb is absorbed
+				if (CheckCollisionCircles(player->position, player->size, orbs[i].position, orbs[i].size)) {
+					player->xp += orbs[i].exp;
+					orbs[i].active = false;
+				}
+			}
+		}
+	}
+}
+void UpdatePlayer(Player* player)
 {
 	// Create a direction vector based on keyboard input
 	Vector2 direction = { 0.0f, 0.0f };
@@ -64,7 +122,7 @@ void UpdatePlayerPosition(Player* player)
 	if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) direction.x += 1.0f;
 
 	// Normalize the direction vector to ensure consistent speed in all directions
-	float length = sqrt(direction.x * direction.x + direction.y * direction.y);
+	float length = (float)sqrt((double)direction.x * direction.x + direction.y * direction.y);
 	if (length > 1.0f) {
 		direction.x /= length;
 		direction.y /= length;
@@ -73,49 +131,111 @@ void UpdatePlayerPosition(Player* player)
 	player->direction.x = direction.x;
 	player->direction.y = direction.y;
 
+	playerSpeed = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT) ? 3.0f : 2.0f;
+
 	// Apply the direction to the player's speed
-	player->speed.x = direction.x * moveSpeed;
-	player->speed.y = direction.y * moveSpeed;
+	player->speed.x = direction.x * moveSpeed * playerSpeed;
+	player->speed.y = direction.y * moveSpeed * playerSpeed;
 
 	// Apply the player's speed to their position
 	player->position.x += player->speed.x;
 	player->position.y += player->speed.y;
+
+
+	needXP=player->level * player->level * 4;
+	if (player->xp>=needXP) {
+		player->level++;
+		player->xp = 0;
+		player->health = PLAYER_MAX_HEALTH;
+	}
 }
 
 void DrawPlayer(Player* player)
 {
 	// Draw the player
-	DrawCircleV(player->position, player->size, player->color);
+	DrawCircleV(player->position, (float)player->size, player->color);
+}
+void SpawnOrb(Vector2 position) {
+	for (int i = 0; i < MAX_ORBS; i++) {
+		if (!orbs[i].active) {
+			orbs[i].position = position;
+			orbs[i].size = 10; // Set the size of the orb
+			orbs[i].active = true;
+			orbs[i].exp = 1;
+			orbs[i].color = GREEN;
+			break;
+		}
+	}
 }
 
-void UpdateEnemyPosition(Enemy* enemy)
+void DrawOrbs(void) {
+	for (int i = 0; i < MAX_ORBS; i++) {
+		if (orbs[i].active) {
+			// Draw an orb at the orb's position
+			DrawCircleV(orbs[i].position, (float)orbs[i].size, orbs[i].color); // Change color as needed
+		}
+	}
+}
+
+void UpdateEnemy(Enemy* enemy)
 {
+	if (!enemy->active) return;
+	// delete enemy if health is 0 or lower
+	if (enemy->health <= 0) {
+
+		//completely delete enemy without respawn
+
+
+		SpawnOrb(enemy->position);
+
+		//respawn enemy outside of the camera range of vision
+		int respawnOffset = 100; // Adjust as needed
+		enemy->position = (Vector2){
+			GetRandomValue(camera.target.x - GetScreenWidth() / 2 - respawnOffset, camera.target.x + GetScreenWidth() / 2 + respawnOffset),
+			GetRandomValue(camera.target.y - GetScreenHeight() / 2 - respawnOffset, camera.target.y + GetScreenHeight() / 2 + respawnOffset)
+		};
+		enemy->health = 3; // Reset health
+	}
 	Vector2 direction = { 0.0f, 0.0f };
 	direction.x = (player.position.x-enemy->position.x);
 	direction.y = (player.position.y-enemy->position.y);
 
     // Normalize the direction vector to ensure consistent speed in all directions
 	
-	float length = sqrt((double)(direction.x * direction.x + direction.y * direction.y));
+	float length = (float)sqrt((double)(direction.x * direction.x + direction.y * direction.y));
 	if (length > 1.0f) {
 		direction.x /= length;
 		direction.y /= length;
 	}
 	// Apply the player's speed to their position
-	enemy->position.x += direction.x/200;
-	enemy->position.y += direction.y/200;
+	enemy->position.x += direction.x * enemySpeed;
+	enemy->position.y += direction.y * enemySpeed;
+
+
+
+	if (enemy->hitTimer > 0) {
+		enemy->hitTimer -= GetFrameTime();
+		if (enemy->hitTimer <= 0) {
+			enemy->color = RED;
+		}
+	}
 }
 
 
 void DrawEnemy(Enemy* enemy)
 {
 	// Draw the enemy
-	DrawCircleV(enemy->position, enemy->size, enemy->color);
+	if (enemy->active) DrawCircleV(enemy->position, (float)enemy->size, enemy->color);
 }
 
 
-void FireBullet(void) {
-	if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+void throwDagger(void) {
+
+	bulletFireTimer += GetFrameTime(); // Increment timer
+
+	if (bulletFireTimer >= 0.2f) { // Change 0.2f to your desired fire interval
+		bulletFireTimer = 0.0f; // Reset timer
+
 		for (int i = 0; i < MAX_BULLETS; i++) {
 			if (!bullets[i].active) {
 				if (player.direction.x == 0 && player.direction.y == 0) return;
@@ -125,14 +245,23 @@ void FireBullet(void) {
 				bullets[i].direction = player.direction;
 
 				bullets[i].active = true;
+				bullets[i].remainingHits = bullets[i].hits;
+
+				// Initialize hitEnemies array
+				for (int j = 0; j < MAX_ENEMIES; j++) {
+					bullets[i].hitEnemies[j] = false;
+				}
+
 				break;
 			}
 		}
 	}
 }
-
-void UpdateBullets(void) {
+void UpdateDagger(void) {
 	for (int i = 0; i < MAX_BULLETS; i++) {
+		if (bullets[i].remainingHits <= 0) {
+			bullets[i].active = false;
+		}
 		if (bullets[i].active) {
 			bullets[i].position.x += bullets[i].direction.x * bullets[i].speed;
 			bullets[i].position.y += bullets[i].direction.y * bullets[i].speed;
@@ -143,6 +272,19 @@ void UpdateBullets(void) {
 				bullets[i].position.x > camera.target.x + GetScreenWidth() / 2 ||
 				bullets[i].position.y > camera.target.y + GetScreenHeight() / 2) {
 				bullets[i].active = false;
+			}
+
+			// Check for collisions with all enemies
+			for (int j = 0; j < MAX_ENEMIES; j++) {
+				if (!bullets[i].hitEnemies[j] && CheckCollisionCircles(bullets[i].position, 2, enemies[j].position, (float)enemies[j].size)) {
+					enemies[j].health -= bullets[i].dmg;
+					bullets[i].remainingHits--;
+					bullets[i].hitEnemies[j] = true; // Mark this enemy as hit
+					enemies[j].color = WHITE;
+					enemies[j].hitTimer = 0.2f; // Start the hit timer
+					//make a hit sound 
+					
+				}
 			}
 		}
 	}
@@ -156,6 +298,35 @@ void DrawBullets(void) {
 	}
 }
 
+void DrawHealthBar(Player* player) {
+	int healthBarWidth = 50; // Adjust as needed
+	int healthBarHeight = 10; // Adjust as needed
+	int healthBarOffsetY = -30; // Adjust as needed
+
+	Vector2 healthBarPosition = { player->position.x - healthBarWidth / 2, player->position.y - healthBarOffsetY };
+
+	DrawRectangle(healthBarPosition.x, healthBarPosition.y, healthBarWidth, healthBarHeight, RED); // Background
+	DrawRectangle(healthBarPosition.x, healthBarPosition.y, (healthBarWidth * player->health) / PLAYER_MAX_HEALTH, healthBarHeight, GREEN); // Foreground
+}
+
+void DrawXPBar(Player* player) {
+	int xpBarWidth = GetScreenWidth(); // Full width of the screen
+	int xpBarHeight = 40; // Adjust as needed
+	int XPBarOffsetY = GetScreenHeight()/2; // Adjust as needed
+
+	Vector2 xpBarPosition = { player->position.x - xpBarWidth / 2, player->position.y - XPBarOffsetY };
+
+	DrawRectangle(xpBarPosition.x, xpBarPosition.y, xpBarWidth, xpBarHeight, DARKGRAY); // Background
+	DrawRectangle(xpBarPosition.x, xpBarPosition.y, (xpBarWidth * player->xp) / needXP, xpBarHeight, BLUE); // Foreground
+
+	char levelText[32];
+	sprintf(levelText, "Level: %d", player->level);
+	int textWidth = MeasureText(levelText, 35); // Measure the width of the text
+	DrawText(levelText, xpBarPosition.x + xpBarWidth - textWidth - 60, xpBarPosition.y+4, 35, GRAY); // Adjust size and color as needed
+
+}
+
+
 
 
 void InitGameplayScreen(void)
@@ -166,8 +337,11 @@ void InitGameplayScreen(void)
 	player.speed = (Vector2){ 0.0f, 0.0f };
 	player.size = 20;
 	player.color = BLUE;
-	player.UpdatePosition = UpdatePlayerPosition;
-	player.Draw = DrawPlayer;
+	player.xp = 0;
+	player.level = 1;
+	player.health = PLAYER_MAX_HEALTH;
+	player.absorptionRadius = 100;
+
 
 	finishScreen = 0;
 
@@ -184,14 +358,18 @@ void InitGameplayScreen(void)
 		enemies[i].speed = (Vector2){ 0.0f, 0.0f };
 		enemies[i].size = 20;
 		enemies[i].color = RED;
-		enemies[i].UpdatePosition = UpdateEnemyPosition;
-		enemies[i].Draw = DrawEnemy;
+		enemies[i].health = 3;
+		enemies[i].active = true;
+
+
 	}
 
 	//init bullets
 	for (int i = 0; i < MAX_BULLETS; i++) {
-		bullets[i].speed = 3;
+		bullets[i].speed = 8;
 		bullets[i].active = false;
+		bullets[i].hits = 3;
+		bullets[i].dmg = 1;
 	}
 }
 
@@ -201,21 +379,21 @@ void UpdateGameplayScreen(void)
 
 
 	// Update player position
-	player.UpdatePosition(&player);
+	UpdatePlayer(&player);
 
 	//update enemies position
 	for (int i = 0; i < MAX_ENEMIES; i++)
 	{
-		enemies[i].UpdatePosition(&enemies[i], &player);
+		UpdateEnemy(&enemies[i], &player);
 	}
 
 	// Update camera target
 	camera.target = player.position;
 
 	// Move bulelts
-	UpdateBullets();
-
-	FireBullet();
+	UpdateDagger();
+	AbsorbOrbs(&player);
+	throwDagger();
 }
 
 void DrawGameplayScreen(void)
@@ -242,16 +420,16 @@ void DrawGameplayScreen(void)
 	// Draw the enemies 
 	for (int i = 0; i < MAX_ENEMIES; i++)
 	{
-		enemies[i].Draw(&enemies[i]);
+		DrawEnemy(&enemies[i]);
 	}
-
+	DrawOrbs();
 	// Draw the player
-	player.Draw(&player);
-
+	DrawPlayer(&player);
+	DrawHealthBar(&player);
 
 	// Draw bullets
 	DrawBullets();
-
+	DrawXPBar(&player);
 	EndMode2D();
 }
 
