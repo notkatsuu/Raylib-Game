@@ -12,7 +12,7 @@
 #define PLAYER_MAX_HEALTH 100
 #define MAX_BULLETS 50
 
-#define MAX_ORBS 5
+#define MAX_ORBS 100
 
 
 
