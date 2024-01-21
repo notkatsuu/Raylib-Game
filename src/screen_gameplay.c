@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include "screens.h"
 #include <math.h>
+#include <stdio.h>
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
@@ -84,32 +85,30 @@ Camera2D camera = { 0 };
 // Gameplay Screen Functions Definition
 //----------------------------------------------------------------------------------
 
-void AbsorbOrbs(Player* player) {
+void AbsorbOrbs(Player* plyr) {
 	for (int i = 0; i < MAX_ORBS; i++) {
-		if (orbs[i].active) {
-			if (CheckCollisionCircles(player->position, player->absorptionRadius, orbs[i].position, orbs[i].size)) {
-				//make orbs move towards the player
-				Vector2 direction = { 0.0f, 0.0f };
+		if (orbs[i].active && CheckCollisionCircles(plyr->position, plyr->absorptionRadius, orbs[i].position, orbs[i].size)) {
+			//make orbs move towards the player
+			Vector2 direction = { 0.0f, 0.0f };
 
-				direction.x = (player->position.x - orbs[i].position.x);
-				direction.y = (player->position.y - orbs[i].position.y);
+			direction.x = (plyr->position.x - orbs[i].position.x);
+			direction.y = (plyr->position.y - orbs[i].position.y);
 
-				// Normalize the direction vector to ensure consistent speed in all directions
+			// Normalize the direction vector to ensure consistent speed in all directions
 
-				float length = sqrt((double)(direction.x * direction.x + direction.y * direction.y));
-				if (length > 1.0f) {
-					direction.x /= length;
-					direction.y /= length;
-				}
-				// Apply the player's speed to their position
-				orbs[i].position.x += direction.x * 2;
-				orbs[i].position.y += direction.y * 2;
+			float length = sqrt((double)(direction.x * direction.x + direction.y * direction.y));
+			if (length > 1.0f) {
+				direction.x /= length;
+				direction.y /= length;
+			}
+			// Apply the player's speed to their position
+			orbs[i].position.x += direction.x * 2;
+			orbs[i].position.y += direction.y * 2;
 
-				//check if orb is absorbed
-				if (CheckCollisionCircles(player->position, player->size, orbs[i].position, orbs[i].size)) {
-					player->xp += orbs[i].exp;
-					orbs[i].active = false;
-				}
+			//check if orb is absorbed
+			if (CheckCollisionCircles(plyr->position, plyr->size, orbs[i].position, orbs[i].size)) {
+				plyr->xp += orbs[i].exp;
+				orbs[i].active = false;
 			}
 		}
 	}
@@ -405,7 +404,7 @@ void UpdateGameplayScreen(void)
 	//update enemies position
 	for (int i = 0; i < MAX_ENEMIES; i++)
 	{
-		UpdateEnemy(&enemies[i], &player);
+		UpdateEnemy(&enemies[i]);
 	}
 
 	// Update camera target

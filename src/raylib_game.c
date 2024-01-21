@@ -31,8 +31,8 @@ Sound fxCoin = { 0 };
 //----------------------------------------------------------------------------------
 // Local Variables Definition (local to this module)
 //----------------------------------------------------------------------------------
-static const int screenWidth = 1920;
-static const int screenHeight = 1080;
+static const int screenWidth = 1024;
+static const int screenHeight = 576;
 
 // Required variables to manage screen transitions (fade-in, fade-out)
 static float transAlpha = 0.0f;
@@ -62,7 +62,8 @@ int main(void)
     // Initialization
     //---------------------------------------------------------
     InitWindow(screenWidth, screenHeight, "Katsu butanero");
-    ToggleFullscreen();
+    //ToggleFullscreen();
+    SetConfigFlags(FLAG_VSYNC_HINT);
     InitAudioDevice();      // Initialize audio device
 
     // Load global data (assets that must be available in all screens, i.e. font)
