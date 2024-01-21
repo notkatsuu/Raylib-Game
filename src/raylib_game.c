@@ -23,16 +23,22 @@
 // Shared Variables Definition (global)
 // NOTE: Those variables are shared between modules through screens.h
 //----------------------------------------------------------------------------------
+RenderTexture2D target;
 GameScreen currentScreen = LOGO;
 Font font = { 0 };
 Music music = { 0 };
 Sound fxCoin = { 0 };
+int gameWidth = 256;
+int gameHeight = 144;
 
 //----------------------------------------------------------------------------------
 // Local Variables Definition (local to this module)
 //----------------------------------------------------------------------------------
-static const int screenWidth = 1024;
-static const int screenHeight = 576;
+
+
+static const int screenWidth = 1920;
+static const int screenHeight = 1080;
+
 
 // Required variables to manage screen transitions (fade-in, fade-out)
 static float transAlpha = 0.0f;
@@ -64,6 +70,8 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "Katsu butanero");
     //ToggleFullscreen();
     SetConfigFlags(FLAG_VSYNC_HINT);
+    target = LoadRenderTexture(gameWidth, gameHeight);
+    SetTextureFilter(target.texture, TEXTURE_FILTER_POINT);
     InitAudioDevice();      // Initialize audio device
 
     // Load global data (assets that must be available in all screens, i.e. font)
@@ -223,7 +231,7 @@ static void UpdateDrawFrame(void)
     // Update
     //----------------------------------------------------------------------------------
     UpdateMusicStream(music);       // NOTE: Music keeps playing between screens
-       
+
     if (IsKeyPressed(KEY_F11))
     {
         ToggleFullscreen(); // Switch to fullscreen
@@ -231,46 +239,46 @@ static void UpdateDrawFrame(void)
 
     if (!onTransition)
     {
-        switch(currentScreen)
+        switch (currentScreen)
         {
-            case LOGO:
-            {
-                UpdateLogoScreen();
+        case LOGO:
+        {
+            UpdateLogoScreen();
 
-                if (FinishLogoScreen()) TransitionToScreen(TITLE);
+            if (FinishLogoScreen()) TransitionToScreen(TITLE);
 
-            } break;
-            case TITLE:
-            {
-                UpdateTitleScreen();
+        } break;
+        case TITLE:
+        {
+            UpdateTitleScreen();
 
-                if (FinishTitleScreen() == 1) TransitionToScreen(OPTIONS);
-                else if (FinishTitleScreen() == 2) TransitionToScreen(GAMEPLAY);
+            if (FinishTitleScreen() == 1) TransitionToScreen(OPTIONS);
+            else if (FinishTitleScreen() == 2) TransitionToScreen(GAMEPLAY);
 
-            } break;
-            case OPTIONS:
-            {
-                UpdateOptionsScreen();
+        } break;
+        case OPTIONS:
+        {
+            UpdateOptionsScreen();
 
-                if (FinishOptionsScreen()) TransitionToScreen(TITLE);
+            if (FinishOptionsScreen()) TransitionToScreen(TITLE);
 
-            } break;
-            case GAMEPLAY:
-            {
-                UpdateGameplayScreen();
+        } break;
+        case GAMEPLAY:
+        {
+            UpdateGameplayScreen();
 
-                if (FinishGameplayScreen() == 1) TransitionToScreen(ENDING);
-                //else if (FinishGameplayScreen() == 2) TransitionToScreen(TITLE);
+            if (FinishGameplayScreen() == 1) TransitionToScreen(ENDING);
+            //else if (FinishGameplayScreen() == 2) TransitionToScreen(TITLE);
 
-            } break;
-            case ENDING:
-            {
-                UpdateEndingScreen();
+        } break;
+        case ENDING:
+        {
+            UpdateEndingScreen();
 
-                if (FinishEndingScreen() == 1) TransitionToScreen(TITLE);
+            if (FinishEndingScreen() == 1) TransitionToScreen(TITLE);
 
-            } break;
-            default: break;
+        } break;
+        default: break;
         }
     }
     else UpdateTransition();    // Update transition (fade-in, fade-out)
@@ -279,24 +287,29 @@ static void UpdateDrawFrame(void)
     // Draw
     //----------------------------------------------------------------------------------
     BeginDrawing();
+    ClearBackground(BLACK);
 
-        ClearBackground(RAYWHITE);
+    BeginTextureMode(target);
+    ClearBackground(RAYWHITE);
 
-        switch(currentScreen)
-        {
-            case LOGO: DrawLogoScreen(); break;
-            case TITLE: DrawTitleScreen(); break;
-            case OPTIONS: DrawOptionsScreen(); break;
-            case GAMEPLAY: DrawGameplayScreen(); break;
-            case ENDING: DrawEndingScreen(); break;
-            default: break;
-        }
+    switch (currentScreen)
+    {
+    case LOGO: DrawLogoScreen(); break;
+    case TITLE: DrawTitleScreen(); break;
+    case OPTIONS: DrawOptionsScreen(); break;
+    case GAMEPLAY: DrawGameplayScreen(); break;
+    case ENDING: DrawEndingScreen(); break;
+    default: break;
+    }
 
-        // Draw full screen rectangle in front of everything
-        if (onTransition) DrawTransition();
+    // Draw full screen rectangle in front of everything
+    if (onTransition) DrawTransition();
 
-        //DrawFPS(10, 10);
+    //DrawFPS(10, 10);
 
+    EndTextureMode();
+
+    DrawTexturePro(target.texture, (Rectangle) { 0.0f, 0.0f, (float)target.texture.width, (float)-target.texture.height }, (Rectangle) { 0.0f, 0.0f, (float)GetScreenWidth(), (float)GetScreenHeight() }, (Vector2) { 0, 0 }, 0.0f, WHITE);
     EndDrawing();
     //----------------------------------------------------------------------------------
 }
