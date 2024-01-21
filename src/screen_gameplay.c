@@ -63,6 +63,12 @@ typedef struct Orb {
 } Orb;
 
 
+//----------------------------------------------------------------------------------
+//TEXTURES
+// 
+Texture2D bulletTexture;
+
+//----------------------------------------------------------------------------------
 
 
 static int finishScreen = 0;
@@ -313,11 +319,17 @@ void UpdateDagger(void) {
 }
 
 void DrawBullets(void) {
+	
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		if (bullets[i].active) {
-			DrawCircleV(bullets[i].position, 2, WHITE);
+			DrawTexture(bulletTexture, bullets[i].position.x, bullets[i].position.y, WHITE);
+
+			DrawCircle(bullets[i].position.x, bullets[i].position.y, 2, RED);
 		}
+		
 	}
+
+
 }
 
 void DrawHealthBar(Player* player) {
@@ -387,6 +399,8 @@ void InitGameplayScreen(void)
 	}
 
 	//init bullets
+	bulletTexture = LoadTexture("resources/dagger.png");
+	printf("Texture Width: %d, Height: %d\n", bulletTexture.width, bulletTexture.height);
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		bullets[i].speed = 8;
 		bullets[i].active = false;
@@ -423,6 +437,7 @@ void DrawGameplayScreen(void)
 	DrawRectangle(0, 0, WIDTH, HEIGHT, BLACK);
 
 	BeginMode2D(camera);
+	
 
 	int gridSize = 40; // Change this to change the size of the grid cells
 
@@ -457,7 +472,7 @@ void DrawGameplayScreen(void)
 
 void UnloadGameplayScreen(void)
 {
-	// TODO: Unload GAMEPLAY screen variables here!
+	UnloadTexture(bulletTexture);
 }
 
 int FinishGameplayScreen(void)
