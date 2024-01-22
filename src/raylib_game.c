@@ -66,9 +66,9 @@ static void UpdateDrawFrame(void);          // Update and draw one frame
 int main(void)
 {
     // Initialization
-    //---------------------------------------------------------
-    InitWindow(screenWidth, screenHeight, "Katsu butanero");
-    //ToggleFullscreen();
+    //-------------------------------BOLUDO--------------------------
+    InitWindow(screenWidth, screenHeight, "");
+    ToggleFullscreen();
     SetConfigFlags(FLAG_VSYNC_HINT);
     target = LoadRenderTexture(gameWidth, gameHeight);
     SetTextureFilter(target.texture, TEXTURE_FILTER_POINT);
