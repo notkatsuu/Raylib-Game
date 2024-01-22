@@ -2,6 +2,7 @@
 #include "screens.h"
 #include <math.h>
 #include <stdio.h>
+#include "raymath.h"
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
@@ -200,11 +201,6 @@ void UpdateEnemy(Enemy* enemy)
 	if (!enemy->active && worldTime>= nextEnemySpawnTime) {
 
 		
-
-
-		
-        
-
         //respawn enemy outside of the camera range of vision
         int respawnOffset = 100; // Adjust as needed
         float angle = (float)GetRandomValue(0, 360); // Random angle in degrees
@@ -223,23 +219,7 @@ void UpdateEnemy(Enemy* enemy)
 
 	}
 
-
-	Vector2 direction = { 0.0f, 0.0f };
-	direction.x = (player.position.x-enemy->position.x);
-	direction.y = (player.position.y-enemy->position.y);
-
-    // Normalize the direction vector to ensure consistent speed in all directions
-	
-	float length = (float)sqrt((double)(direction.x * direction.x + direction.y * direction.y));
-	if (length > 1.0f) {
-		direction.x /= length;
-		direction.y /= length;
-	}
-	// Apply the player's speed to their position
-	enemy->position.x += direction.x * enemySpeed;
-	enemy->position.y += direction.y * enemySpeed;
-
-
+	enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position ,enemy->position)),enemy->position);
 
 	if (enemy->hitTimer > 0) {
 		enemy->hitTimer -= GetFrameTime();
@@ -310,6 +290,8 @@ void UpdateDagger(void) {
 					bullets[i].hitEnemies[j] = true; // Mark this enemy as hit
 					enemies[j].color = WHITE;
 					enemies[j].hitTimer = 0.2f; // Start the hit timer
+					if (bullets[i].remainingHits <= 0)
+						break;
 					//make a hit sound 
 					
 				}

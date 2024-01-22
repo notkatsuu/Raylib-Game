@@ -65,10 +65,12 @@ static void UpdateDrawFrame(void);          // Update and draw one frame
 //----------------------------------------------------------------------------------
 int main(void)
 {
+
+    
     // Initialization
     //-------------------------------BOLUDO--------------------------
     InitWindow(screenWidth, screenHeight, "");
-    ToggleFullscreen();
+    //ToggleFullscreen();
     SetConfigFlags(FLAG_VSYNC_HINT);
     target = LoadRenderTexture(gameWidth, gameHeight);
     SetTextureFilter(target.texture, TEXTURE_FILTER_POINT);
