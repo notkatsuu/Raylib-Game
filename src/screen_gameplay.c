@@ -219,23 +219,20 @@ void UpdateEnemy(Enemy* enemy,int i)
 		nextEnemySpawnTime += 0.2f;
 
 	}
+	enemy->shouldMove = true;
 	for (int j = 0; j < MAX_ENEMIES; j++) 
 	{
 		Enemy other = enemies[j];
 		if (j == i || !other.active)continue;
-		if (Vector2Distance(enemy->position, other.position) < enemy->size*2)
+		if (Vector2Distance(enemy->position, other.position) < enemy->size * 2)
 		{
-			if(Vector2Distance(player.position,enemy->position)<Vector2Distance(player.position,other.position))
+			bool condition1 = (Vector2Distance(enemy->position, player.position) > Vector2Distance(other.position, player.position));
+			if (condition1)
 			{
-				other.shouldMove = false;
-				enemy->shouldMove = true;
-			}
-			else {
-				other.shouldMove = true;
 				enemy->shouldMove = false;
 			}
+			break;
 		}
-		
 	}
 	if (enemy->shouldMove)
 	{
@@ -250,7 +247,6 @@ void UpdateEnemy(Enemy* enemy,int i)
 		}
 	}
 }
-
 
 void DrawEnemy(Enemy* enemy)
 {
