@@ -2,6 +2,7 @@
 #include "screens.h"
 #include <math.h>
 #include <stdio.h>
+#include "raymath.h"
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
@@ -41,6 +42,7 @@ typedef struct {
 	Color color;
 	float hitTimer;
 	bool active;
+	bool shouldMove;
 } Enemy;
 
 typedef struct Bullet {
@@ -186,7 +188,7 @@ void DrawOrbs(void) {
 	}
 }
 
-void UpdateEnemy(Enemy* enemy)
+void UpdateEnemy(Enemy* enemy,int i)
 {
 	static float nextEnemySpawnTime = 0.2f;
 
@@ -200,11 +202,6 @@ void UpdateEnemy(Enemy* enemy)
 	if (!enemy->active && worldTime>= nextEnemySpawnTime) {
 
 		
-
-
-		
-        
-
         //respawn enemy outside of the camera range of vision
         int respawnOffset = 100; // Adjust as needed
         float angle = (float)GetRandomValue(0, 360); // Random angle in degrees
@@ -222,24 +219,29 @@ void UpdateEnemy(Enemy* enemy)
 		nextEnemySpawnTime += 0.2f;
 
 	}
-
-
-	Vector2 direction = { 0.0f, 0.0f };
-	direction.x = (player.position.x-enemy->position.x);
-	direction.y = (player.position.y-enemy->position.y);
-
-    // Normalize the direction vector to ensure consistent speed in all directions
-	
-	float length = (float)sqrt((double)(direction.x * direction.x + direction.y * direction.y));
-	if (length > 1.0f) {
-		direction.x /= length;
-		direction.y /= length;
+	for (int j = 0; j < MAX_ENEMIES; j++) 
+	{
+		Enemy other = enemies[j];
+		if (j == i || !other.active)continue;
+		if (Vector2Distance(enemy->position, other.position) < enemy->size*2)
+		{
+			if(Vector2Distance(player.position,enemy->position)<Vector2Distance(player.position,other.position))
+			{
+				other.shouldMove = false;
+				enemy->shouldMove = true;
+			}
+			else {
+				other.shouldMove = true;
+				enemy->shouldMove = false;
+			}
+		}
+		
 	}
-	// Apply the player's speed to their position
-	enemy->position.x += direction.x * enemySpeed;
-	enemy->position.y += direction.y * enemySpeed;
-
-
+	if (enemy->shouldMove)
+	{
+		enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position ,enemy->position)),enemy->position);
+	}
+		
 
 	if (enemy->hitTimer > 0) {
 		enemy->hitTimer -= GetFrameTime();
@@ -310,6 +312,8 @@ void UpdateDagger(void) {
 					bullets[i].hitEnemies[j] = true; // Mark this enemy as hit
 					enemies[j].color = WHITE;
 					enemies[j].hitTimer = 0.2f; // Start the hit timer
+					if (bullets[i].remainingHits <= 0)
+						break;
 					//make a hit sound 
 					
 				}
@@ -396,6 +400,7 @@ void InitGameplayScreen(void)
 		enemies[i].color = RED;
 		enemies[i].health = 2;
 		enemies[i].active = false;
+		enemies[i].shouldMove = true;
 
 
 	}
@@ -422,7 +427,7 @@ void UpdateGameplayScreen(void)
 	//update enemies position
 	for (int i = 0; i < MAX_ENEMIES; i++)
 	{
-		UpdateEnemy(&enemies[i]);
+		UpdateEnemy(&enemies[i],i);
 	}
 
 	// Update camera target
