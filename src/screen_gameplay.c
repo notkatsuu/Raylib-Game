@@ -42,6 +42,7 @@ typedef struct {
 	Color color;
 	float hitTimer;
 	bool active;
+	bool shouldMove;
 } Enemy;
 
 typedef struct Bullet {
@@ -187,7 +188,7 @@ void DrawOrbs(void) {
 	}
 }
 
-void UpdateEnemy(Enemy* enemy)
+void UpdateEnemy(Enemy* enemy,int i)
 {
 	static float nextEnemySpawnTime = 0.2f;
 
@@ -218,8 +219,29 @@ void UpdateEnemy(Enemy* enemy)
 		nextEnemySpawnTime += 0.2f;
 
 	}
-
-	enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position ,enemy->position)),enemy->position);
+	for (int j = 0; j < MAX_ENEMIES; j++) 
+	{
+		Enemy other = enemies[j];
+		if (j == i || !other.active)continue;
+		if (Vector2Distance(enemy->position, other.position) < enemy->size*2)
+		{
+			if(Vector2Distance(player.position,enemy->position)<Vector2Distance(player.position,other.position))
+			{
+				other.shouldMove = false;
+				enemy->shouldMove = true;
+			}
+			else {
+				other.shouldMove = true;
+				enemy->shouldMove = false;
+			}
+		}
+		
+	}
+	if (enemy->shouldMove)
+	{
+		enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position ,enemy->position)),enemy->position);
+	}
+		
 
 	if (enemy->hitTimer > 0) {
 		enemy->hitTimer -= GetFrameTime();
@@ -378,6 +400,7 @@ void InitGameplayScreen(void)
 		enemies[i].color = RED;
 		enemies[i].health = 2;
 		enemies[i].active = false;
+		enemies[i].shouldMove = true;
 
 
 	}
@@ -404,7 +427,7 @@ void UpdateGameplayScreen(void)
 	//update enemies position
 	for (int i = 0; i < MAX_ENEMIES; i++)
 	{
-		UpdateEnemy(&enemies[i]);
+		UpdateEnemy(&enemies[i],i);
 	}
 
 	// Update camera target
