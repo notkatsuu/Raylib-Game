@@ -74,8 +74,11 @@ Texture2D bulletTexture;
 
 
 static int finishScreen = 0;
+
 Enemy enemies[MAX_ENEMIES];
+
 Bullet bullets[MAX_BULLETS];
+
 Orb orbs[MAX_ORBS];
 Player player;
 float playerSpeed = 1.0f;
@@ -94,6 +97,8 @@ Camera2D camera = { 0 };
 //----------------------------------------------------------------------------------
 // Gameplay Screen Functions Definition
 //----------------------------------------------------------------------------------
+
+
 
 void AbsorbOrbs(Player* plyr) {
 	for (int i = 0; i < MAX_ORBS; i++) {
