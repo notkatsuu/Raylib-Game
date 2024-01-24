@@ -193,6 +193,8 @@ void DrawOrbs(void) {
 	}
 }
 
+void TryMoveEnemy(enemy, i);
+
 void UpdateEnemy(Enemy* enemy,int i)
 {
 	static float nextEnemySpawnTime = 0.2f;
@@ -224,32 +226,38 @@ void UpdateEnemy(Enemy* enemy,int i)
 		nextEnemySpawnTime += 0.2f;
 
 	}
-	enemy->shouldMove = true;
-	for (int j = 0; j < MAX_ENEMIES; j++) 
-	{
-		Enemy other = enemies[j];
-		if (j == i || !other.active)continue;
-		if (Vector2Distance(enemy->position, other.position) < enemy->size * 2)
-		{
-			bool condition1 = (Vector2Distance(enemy->position, player.position) > Vector2Distance(other.position, player.position));
-			if (condition1)
-			{
-				enemy->shouldMove = false;
-			}
-			break;
-		}
-	}
-	if (enemy->shouldMove)
-	{
-		enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position ,enemy->position)),enemy->position);
-	}
-		
+	
+	TryMoveEnemy(enemy, i);
 
 	if (enemy->hitTimer > 0) {
 		enemy->hitTimer -= GetFrameTime();
 		if (enemy->hitTimer <= 0) {
 			enemy->color = RED;
 		}
+	}
+}
+
+void TryMoveEnemy(Enemy* enemy,int i)
+{
+	enemy->shouldMove = true;
+	for (int j = 0; j < MAX_ENEMIES; j++)
+	{
+		Enemy* other = &enemies[j];
+		if (j == i || !other->active)continue;
+		if (Vector2Distance(enemy->position, other->position) < enemy->size * 2)
+		{
+			bool condition1 = (Vector2Distance(enemy->position, player.position) > Vector2Distance(other->position, player.position));
+			if (condition1)
+			{
+				enemy->shouldMove = false;
+				TryMoveEnemy(other, j);
+			}
+			break;
+		}
+	}
+	if (enemy->shouldMove)
+	{
+		enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position, enemy->position)), enemy->position);
 	}
 }
 
