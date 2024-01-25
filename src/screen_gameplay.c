@@ -43,6 +43,7 @@ typedef struct {
 	float hitTimer;
 	bool active;
 	bool shouldMove;
+	bool hasMoved;
 } Enemy;
 
 typedef struct Bullet {
@@ -197,6 +198,7 @@ void TryMoveEnemy(enemy, i);
 
 void UpdateEnemy(Enemy* enemy,int i)
 {
+	enemy->hasMoved = false;
 	static float nextEnemySpawnTime = 0.2f;
 
 	if (enemy->health <= 0 && enemy->active) {
@@ -239,25 +241,30 @@ void UpdateEnemy(Enemy* enemy,int i)
 
 void TryMoveEnemy(Enemy* enemy,int i)
 {
-	enemy->shouldMove = true;
-	for (int j = 0; j < MAX_ENEMIES; j++)
-	{
-		Enemy* other = &enemies[j];
-		if (j == i || !other->active)continue;
-		if (Vector2Distance(enemy->position, other->position) < enemy->size * 2)
+	if (!enemy->hasMoved) {
+		enemy->hasMoved = true;
+		for (int j = 0; j < MAX_ENEMIES; j++)
 		{
-			bool condition1 = (Vector2Distance(enemy->position, player.position) > Vector2Distance(other->position, player.position));
-			if (condition1)
+			Enemy* other = &enemies[j];
+			if (j == i || !other->active)continue;
+			if (Vector2Distance(enemy->position, other->position) < enemy->size * 2)
 			{
-				enemy->shouldMove = false;
-				TryMoveEnemy(other, j);
+				bool condition1 = (Vector2Distance(enemy->position, player.position) > Vector2Distance(other->position, player.position));
+				if (condition1)
+				{
+					enemy->shouldMove = false;
+					TryMoveEnemy(other, j);
+					break;
+				}
+
 			}
-			break;
+			enemy->shouldMove = true;
+			continue;
 		}
-	}
-	if (enemy->shouldMove)
-	{
-		enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position, enemy->position)), enemy->position);
+		if (enemy->shouldMove)
+		{
+			enemy->position = Vector2Add(Vector2Normalize(Vector2Subtract(player.position, enemy->position)), enemy->position);
+		}
 	}
 }
 
